@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Grape Counter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        input {
+            margin: 20px 0;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        #output {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: green;
+        }
+
+        #image-container {
+            position: relative;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Advanced Grape Counter using AI</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <br>
+    <div id="image-container">
+        <img id="grapeImage" alt="Upload an image of grapes" width="500">
+        <canvas id="canvas"></canvas>
+    </div>
+    <div id="output"></div>
+
+    <!-- Load TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const grapeImage = document.getElementById('grapeImage');
+        const canvas = document.getElementById('canvas');
+        const output = document.getElementById('output');
+        const ctx = canvas.getContext('2d');
+        let model;
+
+        // Load the COCO-SSD model
+        async function loadModel() {
+            model = await cocoSsd.load();
+            console.log('Model loaded successfully!');
+        }
+
+        loadModel(); // Load the model on page load
+
+        imageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    grapeImage.src = e.target.result;
+                    grapeImage.onload = () => {
+                        setTimeout(() => processImage(), 500);
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function processImage() {
+            canvas.width = grapeImage.width;
+            canvas.height = grapeImage.height;
+            ctx.drawImage(grapeImage, 0, 0, grapeImage.width, grapeImage.height);
+
+            const predictions = await model.detect(grapeImage);
+            let grapeCount = 0;
+
+            // Loop through detected objects and check for objects that are likely grapes
+            predictions.forEach(prediction => {
+                if (prediction.class === 'apple' && prediction.score > 0.5) { 
+                    // Assuming 'apple' is the closest class in COCO-SSD (since it doesn’t have 'grape')
+                    grapeCount++;
+                    drawBoundingBox(prediction);
+                }
+            });
+
+            output.innerText = `Number of grapes detected: ${grapeCount}`;
+        }
+
+        function drawBoundingBox(prediction) {
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(
+                prediction.bbox[0],
+                prediction.bbox[1],
+                prediction.bbox[2],
+                prediction.bbox[3]
+            );
+        }
+    </script>
+</body>
+</html>
